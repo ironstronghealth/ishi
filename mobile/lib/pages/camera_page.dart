@@ -9,11 +9,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Read the backend base URL from a build-time define:
 /// flutter run/build ... --dart-define=API_BASE_URL=https://ishi-api.onrender.com
 const String _apiBase =
     String.fromEnvironment('API_BASE_URL', defaultValue: '');
+
+// Light network hardening
+const _kTimeoutSec = 15;   // connect/read timeout per attempt
+const _kMaxAttempts = 3;   // upload attempts (with tiny backoff)
 
 Uri _joinPath(Uri base, String path) {
   if (path.startsWith('/')) {
@@ -25,9 +30,57 @@ Uri _joinPath(Uri base, String path) {
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
-
   @override
   State<CameraPage> createState() => _CameraPageState();
+}
+
+class _HomeDisclaimerBanner extends StatelessWidget {
+  const _HomeDisclaimerBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Colors.amber[50],
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.info_outline, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Informational only — not a diagnosis or a medical device. '
+                    'Consult a qualified clinician for medical concerns.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  const SizedBox(height: 6),
+                  InkWell(
+                    onTap: () => launchUrl(
+                      Uri.parse('https://www.ironstronginitiative.com/privacy'),
+                      mode: LaunchMode.externalApplication,
+                    ),
+                    child: const Text(
+                      'Privacy Policy',
+                      style: TextStyle(
+                        fontSize: 12,
+                        decoration: TextDecoration.underline,
+                        color: Colors.blueAccent,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _CameraPageState extends State<CameraPage> {
@@ -60,7 +113,6 @@ class _CameraPageState extends State<CameraPage> {
   }
 
   Future<void> _takePhoto() async {
-    // Works on Android/iOS; on web it falls back to file input.
     final x = await _picker.pickImage(source: ImageSource.camera, imageQuality: 95);
     if (x == null) return;
     final bytes = await x.readAsBytes();
@@ -85,51 +137,59 @@ class _CameraPageState extends State<CameraPage> {
     setState(() => _loading = true);
 
     try {
-      final req = http.MultipartRequest('POST', uri)
-        ..files.add(http.MultipartFile.fromBytes(
-          'image', // server expects "image"
-          _imageBytes!,
-          filename: 'upload.jpg',
-          contentType: MediaType('image', 'jpeg'),
-        ));
+      int attempts = 0;
+      Object? lastErr;
+      while (attempts < _kMaxAttempts) {
+        attempts++;
+        try {
+          final req = http.MultipartRequest('POST', uri)
+            ..files.add(http.MultipartFile.fromBytes(
+              'image',
+              _imageBytes!,
+              filename: 'upload.jpg',
+              contentType: MediaType('image', 'jpeg'),
+            ));
 
-      final res = await req.send();
-      final body = await res.stream.bytesToString();
+          final streamed = await req.send().timeout(const Duration(seconds: _kTimeoutSec));
+          final res = await http.Response.fromStream(streamed)
+              .timeout(const Duration(seconds: _kTimeoutSec));
 
-      if (res.statusCode == 200) {
-        final m = jsonDecode(body) as Map<String, dynamic>;
-        final isAnemic = m['anemic'] == true;
-        final score = (m['score'] is num) ? (m['score'] as num).toDouble() : 0.0;
-        final pct = (score * 100).toStringAsFixed(1);
-        final cropper = (m['cropper'] ?? 'n/a').toString();
+          if (res.statusCode == 200) {
+            final m = jsonDecode(res.body) as Map<String, dynamic>;
+            final isAnemic = m['anemic'] == true;
+            final score = (m['score'] is num) ? (m['score'] as num).toDouble() : 0.0;
+            final pct = (score * 100).toStringAsFixed(1);
+            final cropper = (m['cropper'] ?? 'n/a').toString();
 
-        final resultText = isAnemic ? 'Anemic' : 'Not Anemic';
-        final detailText = 'Score: $pct% • Cropper: $cropper';
+            final resultText = isAnemic ? 'Anemic' : 'Not Anemic';
+            final detailText = 'Score: $pct% • Cropper: $cropper';
 
-        final ts = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
-        final entry = {'timestamp': ts, 'result': resultText};
+            final ts = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+            final entry = {'timestamp': ts, 'result': resultText};
 
-        // Persist history
-        final prefs = await SharedPreferences.getInstance();
-        setState(() {
-          _result = resultText;
-          _detail = detailText;
-          _history.insert(0, entry);
-        });
-        await prefs.setString('ishi_test_history', jsonEncode(_history));
-      } else {
-        setState(() {
-          _result = 'Error ${res.statusCode}';
-          _detail = body;
-        });
+            final prefs = await SharedPreferences.getInstance();
+            setState(() {
+              _result = resultText;
+              _detail = detailText;
+              _history.insert(0, entry);
+            });
+            await prefs.setString('ishi_test_history', jsonEncode(_history));
+            return;
+          } else {
+            lastErr = 'HTTP ${res.statusCode}: ${res.body}';
+          }
+        } catch (e) {
+          lastErr = e;
+        }
+        await Future.delayed(Duration(milliseconds: 250 * attempts * attempts));
       }
-    } catch (e) {
+
       setState(() {
         _result = 'Network error';
-        _detail = e.toString();
+        _detail = 'Upload failed after $_kMaxAttempts attempts: $lastErr';
       });
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -143,7 +203,7 @@ class _CameraPageState extends State<CameraPage> {
       return;
     }
     try {
-      final r = await http.get(u);
+      final r = await http.get(u).timeout(const Duration(seconds: _kTimeoutSec));
       setState(() {
         _result = 'Health ${r.statusCode}';
         _detail = r.body;
@@ -191,7 +251,6 @@ class _CameraPageState extends State<CameraPage> {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                // Connectivity row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -205,8 +264,9 @@ class _CameraPageState extends State<CameraPage> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                const _HomeDisclaimerBanner(),
                 const SizedBox(height: 16),
-
                 const Text(
                   'About Anemia',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
@@ -222,7 +282,6 @@ class _CameraPageState extends State<CameraPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
                 if (_imageBytes != null) ...[
                   const Text('Selected Image:', style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
@@ -232,7 +291,6 @@ class _CameraPageState extends State<CameraPage> {
                   ),
                   const SizedBox(height: 20),
                 ],
-
                 if (_loading)
                   const CircularProgressIndicator()
                 else if (_result != null)
@@ -254,14 +312,18 @@ class _CameraPageState extends State<CameraPage> {
                           if (_detail != null) ...[
                             const SizedBox(height: 6),
                             Text(_detail!, style: const TextStyle(fontSize: 14)),
-                          ]
+                          ],
+                          const SizedBox(height: 10),
+                          const Text(
+                            'Informational only — not a diagnosis or a medical device.',
+                            style: TextStyle(fontSize: 12, color: Colors.black54),
+                            textAlign: TextAlign.center,
+                          ),
                         ],
                       ),
                     ),
                   ),
-
                 const SizedBox(height: 20),
-
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
@@ -281,9 +343,7 @@ class _CameraPageState extends State<CameraPage> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 30),
-
                 if (_history.isNotEmpty) ...[
                   const Divider(),
                   const Text('Test History',

@@ -115,12 +115,8 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Bigger logo, smaller title inside our custom bar
       appBar: AppBar(
-        title: const AppTitleBar(
-          logoSize: 48,           // bigger mark
-          titleFontSize: 16,      // slightly smaller text
-        ),
+        title: const AppTitleBar(logoSize: 48, titleFontSize: 16),
         actions: [
           IconButton(
             tooltip: 'Refresh news',

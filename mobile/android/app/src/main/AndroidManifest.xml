@@ -2,19 +2,27 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.ironstronginitiative.ishi">
 
+    <!-- Optional camera so devices without a camera can still install -->
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false" />
+
     <!-- Networking for API calls -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Camera (for ImagePicker) -->
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <!-- Read images on Android 13+ (API 33+) -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-
-    <!-- Back-compat for Android 12 and below -->
-    <uses-permission
-        android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
+    <!-- Declare external intents used by camera/gallery to avoid package visibility issues -->
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+            <data android:mimeType="image/*" />
+        </intent>
+    </queries>
 
     <application
         android:name="${applicationName}"
@@ -31,10 +39,10 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
 
-            <!-- Deep link support for Flutter -->
+            <!-- Launcher entry -->
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 

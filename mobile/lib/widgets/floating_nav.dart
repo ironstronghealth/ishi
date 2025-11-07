@@ -22,7 +22,7 @@ class FloatingNavBar extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _item(context, Icons.home_rounded, 'Home', 0),
-                _item(context, Icons.auto_awesome, 'ISHI-AI Check', 1),
+                _item(context, Icons.auto_awesome, 'ISHI-AI Check', 1), // <- AI tab
                 _item(context, Icons.event, 'Events', 2),
                 _item(context, Icons.person, 'Profile', 3),
                 _item(context, Icons.info_outline, 'About', 4),
