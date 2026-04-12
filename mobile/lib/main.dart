@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:camera/camera.dart'; // <-- import camera
+import 'package:provider/provider.dart';
 import 'pages/home_page.dart';
 import 'pages/camera_page.dart'; // ISHI-AI Check
 import 'pages/profile_page.dart';
 import 'widgets/floating_nav.dart';
 import 'pages/about_page.dart';
+import 'food_tracker/food_tracker_page.dart'; // new full food tracker
+import 'food_tracker/providers/food_tracker_provider.dart';
 // Ensures Isar native libraries are bundled in release builds.
 // import 'package:isar_flutter_libs/isar_flutter_libs.dart' as _;
 
-void main() => runApp(const ISHIApp());
+// Global variable to store cameras
+late List<CameraDescription> cameras;
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  cameras = await availableCameras(); // initialize cameras
+  runApp(const ISHIApp());
+}
 
 class ISHIApp extends StatefulWidget {
   const ISHIApp({super.key});
@@ -17,13 +28,25 @@ class ISHIApp extends StatefulWidget {
 
 class _ISHIAppState extends State<ISHIApp> {
   int _index = 0;
+  final _foodProvider = FoodTrackerProvider();
+
+  @override
+  void dispose() {
+    _foodProvider.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return ChangeNotifierProvider.value(
+      value: _foodProvider,
+      child: MaterialApp(
       title: 'ISHI App',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(useMaterial3: true, colorSchemeSeed: const Color(0xFF2B5CFF)),
+      theme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: const Color(0xFF2B5CFF),
+      ),
       darkTheme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: const Color(0xFF2B5CFF),
@@ -33,11 +56,12 @@ class _ISHIAppState extends State<ISHIApp> {
         body: SafeArea(
           child: IndexedStack(
             index: _index,
-            children: const [
+            children: [
               HomePage(),
               CameraPage(),          // ISHI-AI Check
               _EventsPage(),
               ProfilePage(),         // ← real Profile page (Google OAuth + local storage)
+              const FoodTrackerPage(), // ← full food tracker (USDA + log + charts)
               AboutPage(),
               _DonatePage(),
             ],
@@ -48,7 +72,7 @@ class _ISHIAppState extends State<ISHIApp> {
           onTap: (i) => setState(() => _index = i),
         ),
       ),
-    );
+    ));
   }
 }
 

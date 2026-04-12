@@ -21,12 +21,14 @@ class FloatingNavBar extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
+                // the icons for the pages on the nav bar
                 _item(context, Icons.home_rounded, 'Home', 0),
                 _item(context, Icons.auto_awesome, 'ISHI-AI Check', 1),
                 _item(context, Icons.event, 'Events', 2),
-                _item(context, Icons.person, 'Profile', 3),
-                _item(context, Icons.info_outline, 'About', 4),
-                _donate(context, 5),
+                _item(context, Icons.person, 'Profile', 3), 
+                _item(context, Icons.restaurant, 'Food Tracker', 4), // Food tracking page
+                _item(context, Icons.info_outline, 'About', 5),
+                _donate(context, 6),
               ],
             ),
           ),

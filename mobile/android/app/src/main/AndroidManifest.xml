@@ -5,7 +5,7 @@
     <!-- Networking for API calls -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Camera (for ImagePicker) -->
+    <!-- Camera permission -->
     <uses-permission android:name="android.permission.CAMERA" />
 
     <!-- Read images on Android 13+ (API 33+) -->
@@ -15,6 +15,11 @@
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
+
+    <!-- Declare camera hardware safely (prevents crashes on emulators) -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
 
     <application
         android:name="${applicationName}"
@@ -31,16 +36,17 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
 
-            <!-- Deep link support for Flutter -->
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity>
 
-        <!-- Flutter config -->
+        <!-- Flutter embedding -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
     </application>
 </manifest>

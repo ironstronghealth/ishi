@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  camera: ^0.11.0+2
   http: ^1.2.2
   http_parser: ^4.0.2
   intl: ^0.18.1
@@ -23,6 +24,16 @@ dependencies:
   webview_flutter: ^4.7.0
   # isar: ^3.1.0+1
   # isar_flutter_libs: ^3.1.0+1
+
+  # Google ML Kit (Food detection)
+  google_mlkit_image_labeling: ^0.10.0
+
+  # ── Food Tracker additions ──────────────────────────────────────────────────
+  provider: ^6.1.2          # State management for food tracker
+  sqflite: ^2.3.3           # SQLite persistence for meal entries + USDA cache
+  path: ^1.9.0              # Path utilities (used by sqflite)
+  fl_chart: ^0.68.0         # Charts: weekly calorie trend + macro breakdown
+  uuid: ^4.4.0              # UUID generation for MealEntry IDs
 
 dev_dependencies:
   flutter_test:

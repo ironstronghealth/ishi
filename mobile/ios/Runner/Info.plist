@@ -61,5 +61,13 @@
 	  </dict>
 	</array>
 	<!-- ⬆️ End Google Sign-In -->
+
+	<!-- Camera access for food analysis -->
+	<key>NSCameraUsageDescription</key>
+	<string>This app uses the camera to analyze food and estimate nutritional iron content.</string>
+
+	<!-- Photo library access for food images -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app uses photos to analyze food nutrition.</string>
 </dict>
 </plist>
