@@ -1,15 +1,19 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/food_tracker_provider.dart';
+import '../widgets/copy_meals_sheet.dart';
 import '../widgets/meal_entry_card.dart';
 import '../widgets/nutrient_progress_bar.dart';
 import 'camera_scan_screen.dart';
 import 'food_search_screen.dart';
 import 'goals_screen.dart';
 import 'meal_log_screen.dart';
+import 'saved_meals_screen.dart';
 import 'weekly_chart_screen.dart';
 
 /// Primary dashboard for the food tracker.
@@ -23,9 +27,13 @@ class FoodDashboardScreen extends StatefulWidget {
 }
 
 class _FoodDashboardScreenState extends State<FoodDashboardScreen> {
+  late final List<_IronFood> _recommendations;
+
   @override
   void initState() {
     super.initState();
+    final shuffled = List<_IronFood>.from(_ironRichFoods)..shuffle(Random());
+    _recommendations = shuffled.take(5).toList();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<FoodTrackerProvider>().init();
     });
@@ -264,6 +272,19 @@ class _FoodDashboardScreenState extends State<FoodDashboardScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: _ActionButton(
+                          icon: Icons.restaurant_menu,
+                          label: 'Saved Meals',
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SavedMealsScreen(),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _ActionButton(
                           icon: Icons.list_alt,
                           label: 'Full Log',
                           onTap: () => Navigator.push(
@@ -280,13 +301,87 @@ class _FoodDashboardScreenState extends State<FoodDashboardScreen> {
                 ),
               ),
 
+              // ── Iron-rich food recommendations ───────────────────────────
+              SliverToBoxAdapter(
+                child: Card(
+                  margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.tips_and_updates_outlined,
+                                size: 16, color: Color(0xFF9933EE)),
+                            const SizedBox(width: 6),
+                            Text('Iron-Rich Food Ideas',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.copyWith(color: const Color(0xFF9933EE))),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        ..._recommendations.map((food) => Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 3),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 4,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF9933EE),
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(food.name,
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 13)),
+                                        Text(
+                                          '${food.serving}  ·  ${food.ironMg} mg iron  ·  ${food.category}',
+                                          style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.grey),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
               // ── Meals section header ─────────────────────────────────────
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                  child: Text(
-                    'Meals',
-                    style: Theme.of(context).textTheme.titleSmall,
+                  padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Meals',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => showCopyMealsSheet(context),
+                        icon: const Icon(Icons.copy_all, size: 18),
+                        label: const Text('Copy from another day'),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -366,3 +461,65 @@ class _ActionButton extends StatelessWidget {
     );
   }
 }
+
+// ── Iron-rich foods data ───────────────────────────────────────────────────
+
+class _IronFood {
+  final String name;
+  final double ironMg;
+  final String serving;
+  final String category;
+  const _IronFood(this.name, this.ironMg, this.serving, this.category);
+}
+
+const _ironRichFoods = [
+  _IronFood('Chicken Liver', 11.0, '3 oz', 'Organ Meat'),
+  _IronFood('Beef Liver', 5.8, '3 oz', 'Organ Meat'),
+  _IronFood('Clams', 23.8, '3 oz', 'Seafood'),
+  _IronFood('Oysters', 8.0, '3 oz', 'Seafood'),
+  _IronFood('Mussels', 6.7, '3 oz', 'Seafood'),
+  _IronFood('Sardines', 2.9, '3 oz', 'Seafood'),
+  _IronFood('Tuna', 1.3, '3 oz', 'Seafood'),
+  _IronFood('Lean Beef', 2.1, '3 oz', 'Meat'),
+  _IronFood('Ground Beef', 2.5, '3 oz', 'Meat'),
+  _IronFood('Turkey', 1.4, '3 oz', 'Poultry'),
+  _IronFood('Chicken Thigh', 1.3, '3 oz', 'Poultry'),
+  _IronFood('Pork Loin', 1.0, '3 oz', 'Meat'),
+  _IronFood('Lentils', 6.6, '1 cup', 'Legume'),
+  _IronFood('Black Beans', 3.6, '1 cup', 'Legume'),
+  _IronFood('Kidney Beans', 5.2, '1 cup', 'Legume'),
+  _IronFood('Chickpeas', 4.7, '1 cup', 'Legume'),
+  _IronFood('Soybeans', 8.8, '1 cup', 'Legume'),
+  _IronFood('Edamame', 3.5, '1 cup', 'Legume'),
+  _IronFood('Tofu', 6.6, '1/2 cup', 'Plant Protein'),
+  _IronFood('Tempeh', 4.5, '1 cup', 'Plant Protein'),
+  _IronFood('Spinach', 6.4, '1 cup cooked', 'Vegetable'),
+  _IronFood('Swiss Chard', 4.0, '1 cup cooked', 'Vegetable'),
+  _IronFood('Kale', 1.2, '1 cup cooked', 'Vegetable'),
+  _IronFood('Collard Greens', 2.5, '1 cup cooked', 'Vegetable'),
+  _IronFood('Beet Greens', 2.7, '1 cup cooked', 'Vegetable'),
+  _IronFood('Broccoli', 1.0, '1 cup cooked', 'Vegetable'),
+  _IronFood('Asparagus', 2.9, '1 cup cooked', 'Vegetable'),
+  _IronFood('Potato with Skin', 1.9, '1 medium', 'Vegetable'),
+  _IronFood('Quinoa', 2.8, '1 cup cooked', 'Grain'),
+  _IronFood('Oatmeal', 3.4, '1 cup cooked', 'Grain'),
+  _IronFood('Iron-Fortified Cereal', 8.0, '1 serving', 'Grain'),
+  _IronFood('Brown Rice', 0.8, '1 cup cooked', 'Grain'),
+  _IronFood('Pumpkin Seeds', 4.2, '1 oz', 'Seed'),
+  _IronFood('Sesame Seeds', 4.1, '1 oz', 'Seed'),
+  _IronFood('Sunflower Seeds', 1.4, '1 oz', 'Seed'),
+  _IronFood('Hemp Seeds', 2.4, '3 tbsp', 'Seed'),
+  _IronFood('Cashews', 1.9, '1 oz', 'Nut'),
+  _IronFood('Almonds', 1.1, '1 oz', 'Nut'),
+  _IronFood('Pistachios', 1.1, '1 oz', 'Nut'),
+  _IronFood('Dark Chocolate (70%+)', 3.4, '1 oz', 'Snack'),
+  _IronFood('Dried Apricots', 2.7, '1/2 cup', 'Fruit'),
+  _IronFood('Raisins', 1.4, '1/2 cup', 'Fruit'),
+  _IronFood('Prunes', 0.8, '1/2 cup', 'Fruit'),
+  _IronFood('Mulberries', 2.6, '1 cup', 'Fruit'),
+  _IronFood('Eggs', 0.9, '2 large', 'Protein'),
+  _IronFood('Shrimp', 2.6, '3 oz', 'Seafood'),
+  _IronFood('Venison', 3.8, '3 oz', 'Meat'),
+  _IronFood('Bison', 3.0, '3 oz', 'Meat'),
+  _IronFood('Duck', 2.7, '3 oz', 'Poultry'),
+];

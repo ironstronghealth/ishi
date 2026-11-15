@@ -16,7 +16,11 @@ late List<CameraDescription> cameras;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  cameras = await availableCameras(); // initialize cameras
+  try {
+    cameras = await availableCameras(); // initialize cameras
+  } catch (_) {
+    cameras = [];
+  }
   runApp(const ISHIApp());
 }
 
