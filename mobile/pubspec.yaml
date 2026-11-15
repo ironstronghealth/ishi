@@ -34,6 +34,7 @@ dependencies:
   path: ^1.9.0              # Path utilities (used by sqflite)
   fl_chart: ^0.68.0         # Charts: weekly calorie trend + macro breakdown
   uuid: ^4.4.0              # UUID generation for MealEntry IDs
+  mobile_scanner: ^7.5.0
 
 dev_dependencies:
   flutter_test:

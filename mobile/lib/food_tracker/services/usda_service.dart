@@ -90,6 +90,60 @@ class UsdaService {
     }
   }
 
+  /// Household measures ("1 cup", "1 slice") for a USDA food. Search results
+  /// don't include these for non-branded foods, so they are fetched on demand.
+  /// Returns an empty list on any failure — grams are always available.
+  static Future<List<FoodPortion>> fetchPortions(String fdcId) async {
+    if (int.tryParse(fdcId) == null) return const []; // not a USDA id
+    try {
+      final uri = Uri.parse('$_baseUrl/food/$fdcId').replace(
+        queryParameters: {'api_key': _apiKey},
+      );
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return const [];
+      return FoodPortion.listFromUsdaDetail(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    } catch (e) {
+      debugPrint('USDA fetchPortions exception: $e');
+      return const [];
+    }
+  }
+
+  /// Find a branded food by its package barcode (GTIN/UPC).
+  /// Returns null when USDA has no product with that code; throws on
+  /// network/HTTP failure.
+  static Future<FoodItem?> fetchByBarcode(String barcode) async {
+    final uri = Uri.parse('$_baseUrl/foods/search').replace(
+      queryParameters: {
+        'query': barcode,
+        'api_key': _apiKey,
+        'pageSize': '10',
+        'dataType': 'Branded',
+      },
+    );
+
+    final response = await http.get(uri).timeout(const Duration(seconds: 15));
+    if (response.statusCode != 200) {
+      throw Exception('USDA returned status ${response.statusCode}');
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final foods = data['foods'];
+    if (foods is! List) return null;
+
+    // The search is full-text, so only accept an exact code match. USDA and
+    // scanners disagree on leading zeros (UPC-A vs EAN-13), so ignore them.
+    String norm(String s) => s.replaceFirst(RegExp(r'^0+'), '');
+    final wanted = norm(barcode);
+    for (final raw in foods.cast<Map<String, dynamic>>()) {
+      if (norm((raw['gtinUpc'] ?? '').toString()) == wanted) {
+        return FoodItem.fromUsda(raw);
+      }
+    }
+    return null;
+  }
+
   // ── Private helpers ────────────────────────────────────────────────────────
 
   static List<FoodItem> _parseFoods(String body) {

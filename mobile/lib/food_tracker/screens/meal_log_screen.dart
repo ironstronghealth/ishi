@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../models/meal_entry.dart';
 import '../providers/food_tracker_provider.dart';
+import '../widgets/copy_meals_sheet.dart';
 import '../widgets/meal_entry_card.dart';
 
 /// Full-screen list of all meals logged for [date], grouped by MealType.
@@ -16,7 +17,16 @@ class MealLogScreen extends StatelessWidget {
     final title = DateFormat('EEEE, MMM d').format(date);
 
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
+      appBar: AppBar(
+        title: Text(title),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.copy_all),
+            tooltip: 'Copy meals from another day',
+            onPressed: () => showCopyMealsSheet(context),
+          ),
+        ],
+      ),
       body: Consumer<FoodTrackerProvider>(
         builder: (_, provider, __) {
           if (provider.isLoading) {
